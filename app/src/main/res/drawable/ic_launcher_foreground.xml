@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Center Shield / Platform Logo -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,26 L76,36 L76,58 C76,71 66.5,81.5 54,85 C41.5,81.5 32,71 32,58 L32,36 Z" />
+    <path
+        android:fillColor="#2563EB"
+        android:pathData="M54,32 L70,39.5 L70,57 C70,67 63,75 54,78 C45,75 38,67 38,57 L38,39.5 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,42 L58,50 L67,51.5 L60.5,58 L62,67 L54,62.5 L46,67 L47.5,58 L41,51.5 L50,50 Z" />
+</vector>

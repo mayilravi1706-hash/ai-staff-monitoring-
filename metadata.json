@@ -1,0 +1,6 @@
+{
+  "name": "AI Staff Ops",
+  "description": "Enterprise-grade AI Staff Operations Intelligence Platform featuring PostgreSQL, Prisma ORM, secure cookie sessions, and role-based authentication.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

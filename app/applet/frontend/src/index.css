@@ -1,0 +1,102 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#070b14] text-slate-100 antialiased selection:bg-blue-600 selection:text-white;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+}
+
+/* Global Futuristic Neon Theme Override for Web Frontend */
+.bg-white, .bg-slate-50, .bg-gray-50, .bg-slate-100 {
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+.text-slate-900, .text-gray-900, .text-slate-800, .text-gray-800, .text-slate-700, .text-gray-700 {
+  color: #f1f5f9 !important;
+}
+
+.text-slate-500, .text-slate-600, .text-gray-500, .text-gray-600 {
+  color: #94a3b8 !important;
+}
+
+.border-slate-200, .border-slate-300, .border-gray-200, .border-gray-300, .border-slate-100, .border-slate-200\/80 {
+  border-color: rgba(59, 130, 246, 0.28) !important;
+}
+
+input, select, textarea {
+  background-color: #1e293b !important;
+  color: #ffffff !important;
+  border-color: rgba(59, 130, 246, 0.4) !important;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.5) !important;
+  outline: none !important;
+}
+
+table tr:hover {
+  background-color: rgba(30, 41, 59, 0.75) !important;
+}
+
+@keyframes neon-pulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.4), 0 0 30px rgba(147, 51, 234, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.7), 0 0 45px rgba(147, 51, 234, 0.4);
+  }
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-neon-pulse {
+  animation: neon-pulse 3s infinite ease-in-out;
+}
+
+.animate-float-slow {
+  animation: float-slow 4s infinite ease-in-out;
+}
+
+.neon-glow {
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.35);
+}
+
+.neon-glow-purple {
+  box-shadow: 0 0 20px rgba(147, 51, 234, 0.35);
+}
+
+.neon-card {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.8) 100%);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+  backdrop-filter: blur(12px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.neon-card:hover {
+  border-color: rgba(59, 130, 246, 0.7);
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.neon-button {
+  background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
+  box-shadow: 0 0 15px rgba(37, 99, 235, 0.4);
+  transition: all 0.25s ease;
+}
+
+.neon-button:hover {
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.7), 0 0 35px rgba(124, 58, 237, 0.5);
+  transform: translateY(-1px);
+}
+
+.neon-button:active {
+  transform: translateY(1px);
+}

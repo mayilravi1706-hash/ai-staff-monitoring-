@@ -1,0 +1,24 @@
+{
+  "short_name": "AI Staff OS",
+  "name": "AI Staff Operations Intelligence Platform",
+  "description": "Institutional Faculty Workload, Real-time Class Monitoring & Operations OS",
+  "icons": [
+    {
+      "src": "/assets/branding/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/assets/branding/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512",
+      "purpose": "any maskable"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#0f172a",
+  "theme_color": "#2563eb",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}

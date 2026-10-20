@@ -1,0 +1,656 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// User roles: ADMIN, STAFF (Prepared for SUPER_ADMIN, HOD, DEPARTMENT_ADMIN)
+enum UserRole {
+  ADMIN
+  STAFF
+  // Future roles prepared in schema:
+  SUPER_ADMIN
+  HOD
+  DEPARTMENT_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  HALF_DAY
+  LEAVE
+  PERMISSION
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum TaskStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+  OVERDUE
+}
+
+enum ActivityStatus {
+  TEACHING
+  MEETING
+  PREPARING_CLASS
+  ADMINISTRATIVE_WORK
+  AVAILABLE
+  BREAK
+  LEAVE
+}
+
+enum LeaveStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+}
+
+model User {
+  id            String     @id @default(uuid())
+  email         String     @unique
+  password_hash String
+  role          UserRole   @default(STAFF)
+  status        UserStatus @default(ACTIVE)
+  last_login_at DateTime?
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+
+  staff            Staff?
+  notifications    Notification[]
+  ai_analysis_runs AiAnalysisRun[]
+  audit_logs       AuditLog[]
+  sessions         UserSession[]
+  password_resets  PasswordResetToken[]
+  timetable_imports TimetableImport[]
+
+  @@index([email])
+  @@map("users")
+}
+
+model Staff {
+  id                String    @id @default(uuid())
+  user_id           String    @unique
+  staff_id          String    @unique
+  full_name         String
+  profile_photo     String?
+  email             String    @unique
+  phone             String?
+  department_id     String
+  designation       String
+  qualification     String?
+  joining_date      DateTime
+  experience        Int?
+  role              String    @default("STAFF")
+  status            String    @default("ACTIVE")
+  emergency_contact String?
+  address           String?
+  created_at        DateTime  @default(now())
+  updated_at        DateTime  @updatedAt
+
+  user             User             @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  department       Department       @relation(fields: [department_id], references: [id])
+  timetable        Timetable[]
+  attendance       Attendance[]
+  assigned_tasks   Task[]           @relation("AssignedStaff")
+  activities       Activity[]
+  leave_requests   LeaveRequest[]
+  performance             Performance[]
+  workload_metrics        WorkloadMetric[]
+  ai_alerts               AiAlert[]
+  class_monitoring_alerts ClassMonitoringAlert[]
+  operational_alerts      OperationalAlert[]
+
+  @@index([staff_id])
+  @@index([department_id])
+  @@map("staff")
+}
+
+model Department {
+  id         String   @id @default(uuid())
+  name       String
+  code       String   @unique
+  status     String   @default("ACTIVE")
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  staff     Staff[]
+  classes   Class[]
+  subjects  Subject[]
+  ai_alerts AiAlert[]
+  operational_alerts OperationalAlert[]
+
+  @@map("departments")
+}
+
+model Class {
+  id               String   @id @default(uuid())
+  name             String
+  section          String?
+  department_id    String
+  academic_year_id String
+  status           String   @default("ACTIVE")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  department    Department   @relation(fields: [department_id], references: [id])
+  academic_year AcademicYear @relation(fields: [academic_year_id], references: [id])
+  timetable     Timetable[]
+  activities    Activity[]
+  monitoring_alerts ClassMonitoringAlert[]
+
+  @@map("classes")
+}
+
+model Subject {
+  id            String   @id @default(uuid())
+  name          String
+  code          String   @unique
+  department_id String
+  status        String   @default("ACTIVE")
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  department Department  @relation(fields: [department_id], references: [id])
+  timetable  Timetable[]
+  activities Activity[]
+  monitoring_alerts ClassMonitoringAlert[]
+
+  @@map("subjects")
+}
+
+model AcademicYear {
+  id         String   @id @default(uuid())
+  name       String
+  start_date DateTime
+  end_date   DateTime
+  active     Boolean  @default(true)
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  classes   Class[]
+  timetable Timetable[]
+
+  @@map("academic_years")
+}
+
+model Timetable {
+  id               String   @id @default(uuid())
+  staff_id         String
+  class_id         String
+  subject_id       String
+  academic_year_id String
+  day_of_week      Int
+  start_time       String
+  end_time         String
+  room             String?
+  source           String   @default("PDF_IMPORT")
+  source_file      String?
+  status           String   @default("SCHEDULED")
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  staff             Staff                  @relation(fields: [staff_id], references: [id])
+  class             Class                  @relation(fields: [class_id], references: [id])
+  subject           Subject                @relation(fields: [subject_id], references: [id])
+  academic_year     AcademicYear           @relation(fields: [academic_year_id], references: [id])
+  activities        Activity[]
+  monitoring_alerts ClassMonitoringAlert[]
+  operational_alerts OperationalAlert[]
+
+  @@index([staff_id])
+  @@index([class_id])
+  @@index([academic_year_id])
+  @@index([day_of_week])
+  @@index([start_time])
+  @@map("timetable")
+}
+
+model Attendance {
+  id              String           @id @default(uuid())
+  staff_id        String
+  attendance_date DateTime
+  status          AttendanceStatus
+  remarks         String?
+  created_by      String?
+  updated_by      String?
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+
+  staff Staff @relation(fields: [staff_id], references: [id])
+  operational_alerts OperationalAlert[]
+
+  @@unique([staff_id, attendance_date])
+  @@index([staff_id])
+  @@index([attendance_date])
+  @@map("attendance")
+}
+
+model Task {
+  id                String       @id @default(uuid())
+  title             String
+  description       String?
+  assigned_staff_id String
+  assigned_by       String?
+  assigned_date     DateTime     @default(now())
+  due_date          DateTime
+  priority          TaskPriority @default(MEDIUM)
+  category          String?
+  status            TaskStatus   @default(PENDING)
+  remarks           String?
+  completed_at      DateTime?
+  created_at        DateTime     @default(now())
+  updated_at        DateTime     @updatedAt
+
+  assigned_staff Staff        @relation("AssignedStaff", fields: [assigned_staff_id], references: [id])
+  updates        TaskUpdate[]
+  operational_alerts OperationalAlert[]
+
+  @@index([status])
+  @@index([due_date])
+  @@index([assigned_staff_id])
+  @@map("tasks")
+}
+
+model TaskUpdate {
+  id         String      @id @default(uuid())
+  task_id    String
+  old_status TaskStatus?
+  new_status TaskStatus
+  changed_by String?
+  remarks    String?
+  created_at DateTime    @default(now())
+
+  task Task @relation(fields: [task_id], references: [id], onDelete: Cascade)
+
+  @@map("task_updates")
+}
+
+model Activity {
+  id                String         @id @default(uuid())
+  staff_id          String
+  timetable_id      String?
+  activity_status   ActivityStatus
+  description       String?
+  class_id          String?
+  subject_id        String?
+  room              String?
+  start_time        DateTime
+  expected_end_time DateTime?
+  actual_end_time   DateTime?
+  created_at        DateTime       @default(now())
+  updated_at        DateTime       @updatedAt
+
+  staff     Staff      @relation(fields: [staff_id], references: [id])
+  timetable Timetable? @relation(fields: [timetable_id], references: [id])
+  class     Class?     @relation(fields: [class_id], references: [id])
+  subject   Subject?   @relation(fields: [subject_id], references: [id])
+
+  @@index([staff_id])
+  @@index([activity_status])
+  @@index([timetable_id])
+  @@map("activities")
+}
+
+model LeaveRequest {
+  id          String      @id @default(uuid())
+  staff_id    String
+  leave_type  String
+  start_date  DateTime
+  end_date    DateTime
+  duration    Float
+  reason      String?
+  status      LeaveStatus @default(PENDING)
+  reviewed_by String?
+  reviewed_at DateTime?
+  remarks     String?
+  created_at  DateTime    @default(now())
+  updated_at  DateTime    @updatedAt
+
+  staff Staff @relation(fields: [staff_id], references: [id])
+
+  @@index([status])
+  @@index([start_date])
+  @@index([end_date])
+  @@map("leave_requests")
+}
+
+model Notification {
+  id                String    @id @default(uuid())
+  recipient_user_id String
+  type              String
+  title             String
+  message           String
+  related_entity    String?
+  related_entity_id String?
+  read_at           DateTime?
+  created_at        DateTime  @default(now())
+
+  recipient User @relation(fields: [recipient_user_id], references: [id], onDelete: Cascade)
+
+  @@index([recipient_user_id])
+  @@index([read_at])
+  @@map("notifications")
+}
+
+model Performance {
+  id                         String   @id @default(uuid())
+  staff_id                   String
+  period_start               DateTime
+  period_end                 DateTime
+  attendance_score           Float?
+  task_completion_score      Float?
+  on_time_completion_score   Float?
+  class_completion_score     Float?
+  operational_activity_score Float?
+  overall_score              Float?
+  data_completeness          String?
+  calculation_version        String?
+  metadata                   String?
+  created_at                 DateTime @default(now())
+
+  staff Staff @relation(fields: [staff_id], references: [id])
+
+  @@index([staff_id])
+  @@index([period_start])
+  @@index([period_end])
+  @@map("performance")
+}
+
+model WorkloadMetric {
+  id                            String   @id @default(uuid())
+  staff_id                      String
+  period_start                  DateTime
+  period_end                    DateTime
+  teaching_hours                Float    @default(0)
+  class_count                   Int      @default(0)
+  completed_class_count         Int      @default(0)
+  class_coverage_percentage     Float?
+  active_task_count             Int      @default(0)
+  pending_task_count            Int      @default(0)
+  in_progress_task_count        Int      @default(0)
+  completed_task_count          Int      @default(0)
+  overdue_task_count            Int      @default(0)
+  high_priority_task_count      Int      @default(0)
+  urgent_task_count             Int      @default(0)
+  upcoming_deadline_count       Int      @default(0)
+  administrative_activity_count Int      @default(0)
+  meeting_activity_count        Int      @default(0)
+  prep_activity_count           Int      @default(0)
+  leave_days                    Float    @default(0)
+  deadline_pressure             Float?   @default(0)
+  workload_score                Float?
+  workload_status               String?  @default("NORMAL")
+  workload_trend                String?  @default("STABLE")
+  metadata                      String?
+  created_at                    DateTime @default(now())
+
+  staff Staff @relation(fields: [staff_id], references: [id])
+
+  @@index([staff_id])
+  @@index([period_start])
+  @@index([period_end])
+  @@map("workload_metrics")
+}
+
+model AiAlert {
+  id            String    @id @default(uuid())
+  type          String
+  severity      String
+  title         String
+  description   String
+  staff_id      String?
+  department_id String?
+  status        String    @default("ACTIVE")
+  created_at    DateTime  @default(now())
+  resolved_at   DateTime?
+
+  staff      Staff?      @relation(fields: [staff_id], references: [id])
+  department Department? @relation(fields: [department_id], references: [id])
+
+  @@index([status])
+  @@index([type])
+  @@map("ai_alerts")
+}
+
+model AiAnalysisRun {
+  id               String       @id @default(uuid())
+  user_id          String
+  question         String
+  analysis_type    String
+  authorized_scope String?
+  tools_used       String?
+  started_at       DateTime     @default(now())
+  completed_at     DateTime?
+  model            String?
+  status           String       @default("PENDING")
+  response_summary String?
+
+  user     User         @relation(fields: [user_id], references: [id])
+  evidence AiEvidence[]
+
+  @@map("ai_analysis_runs")
+}
+
+model AiEvidence {
+  id              String   @id @default(uuid())
+  analysis_run_id String
+  entity_type     String
+  entity_id       String
+  evidence_type   String
+  explanation     String
+  created_at      DateTime @default(now())
+
+  analysis_run AiAnalysisRun @relation(fields: [analysis_run_id], references: [id], onDelete: Cascade)
+
+  @@map("ai_evidence")
+}
+
+model Report {
+  id             String    @id @default(uuid())
+  title          String?
+  status         String?   @default("COMPLETED")
+  generated_by   String
+  report_type    String
+  format         String
+  filters        String?
+  generated_at   DateTime  @default(now())
+  completed_at   DateTime?
+  record_count   Int?      @default(0)
+  file_reference String?
+
+  @@map("reports")
+}
+
+model Setting {
+  id         String   @id @default(uuid())
+  key        String   @unique
+  value      String
+  data_type  String   @default("STRING")
+  updated_by String?
+  updated_at DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model AuditLog {
+  id           String   @id @default(uuid())
+  user_id      String?
+  action       String
+  entity_type  String
+  entity_id    String
+  before_value String?
+  after_value  String?
+  metadata     String?
+  created_at   DateTime @default(now())
+
+  user User? @relation(fields: [user_id], references: [id])
+
+  @@map("audit_logs")
+}
+
+model UserSession {
+  id           String    @id @default(uuid())
+  user_id      String
+  token_hash   String    @unique
+  expires_at   DateTime
+  ip_address   String?
+  user_agent   String?
+  created_at   DateTime  @default(now())
+  updated_at   DateTime  @updatedAt
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([token_hash])
+  @@index([user_id])
+  @@index([expires_at])
+  @@map("user_sessions")
+}
+
+model PasswordResetToken {
+  id         String    @id @default(uuid())
+  user_id    String
+  token_hash String    @unique
+  expires_at DateTime
+  used_at    DateTime?
+  created_at DateTime  @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([token_hash])
+  @@index([user_id])
+  @@index([expires_at])
+  @@map("password_reset_tokens")
+}
+
+model ClassMonitoringAlert {
+  id                  String    @id @default(uuid())
+  staff_id            String
+  timetable_id        String
+  class_id            String
+  subject_id          String
+  alert_date          DateTime
+  expected_start_time String
+  expected_end_time   String
+  rule_name           String    @default("UNRECORDED_CLASS_ACTIVITY")
+  title               String    @default("Scheduled class activity has not been recorded.")
+  message             String
+  status              String    @default("ACTIVE")
+  created_at          DateTime  @default(now())
+  resolved_at         DateTime?
+
+  staff     Staff     @relation(fields: [staff_id], references: [id])
+  timetable Timetable @relation(fields: [timetable_id], references: [id])
+  class     Class     @relation(fields: [class_id], references: [id])
+  subject   Subject   @relation(fields: [subject_id], references: [id])
+
+  @@unique([timetable_id, alert_date])
+  @@index([staff_id])
+  @@index([alert_date])
+  @@index([status])
+  @@map("class_monitoring_alerts")
+}
+
+model OperationalAlert {
+  id               String    @id @default(uuid())
+  alert_type       String    // CLASS_ACTIVITY_NOT_RECORDED, TASK_OVERDUE, TASK_HIGH_RISK, ATTENDANCE_PATTERN, TIMETABLE_CONFLICT, WORKLOAD_CONCENTRATION, NOTIFICATION_FAILURE, SYSTEM_OPERATIONAL
+  severity         String    // INFO, LOW, MEDIUM, HIGH, CRITICAL
+  status           String    @default("OPEN") // OPEN, ACKNOWLEDGED, RESOLVED, DISMISSED
+  dedup_key        String    @unique
+  rule_identifier  String
+  title            String
+  message          String
+  evidence         String?   // Deterministic factual evidence (JSON string)
+  staff_id         String?
+  department_id    String?
+  timetable_id     String?
+  task_id          String?
+  attendance_id    String?
+  detected_at      DateTime  @default(now())
+  acknowledged_at  DateTime?
+  acknowledged_by  String?
+  resolved_at      DateTime?
+  resolved_by      String?
+  dismissed_at     DateTime?
+  dismissed_by     String?
+  resolution_notes String?
+  created_at       DateTime  @default(now())
+  updated_at       DateTime  @updatedAt
+
+  staff      Staff?      @relation(fields: [staff_id], references: [id], onDelete: SetNull)
+  department Department? @relation(fields: [department_id], references: [id], onDelete: SetNull)
+  timetable  Timetable?  @relation(fields: [timetable_id], references: [id], onDelete: SetNull)
+  task       Task?       @relation(fields: [task_id], references: [id], onDelete: SetNull)
+  attendance Attendance? @relation(fields: [attendance_id], references: [id], onDelete: SetNull)
+
+  @@index([status])
+  @@index([alert_type])
+  @@index([severity])
+  @@index([staff_id])
+  @@index([department_id])
+  @@index([detected_at])
+  @@map("operational_alerts")
+}
+
+model ScheduledJobRun {
+  id                String    @id @default(uuid())
+  job_name          String
+  status            String    // SUCCESS, FAILED, RUNNING
+  started_at        DateTime  @default(now())
+  completed_at      DateTime?
+  duration_ms       Int?
+  records_processed Int?      @default(0)
+  alerts_generated  Int?      @default(0)
+  error_message     String?
+  metadata          String?
+
+  @@index([job_name])
+  @@index([status])
+  @@index([started_at])
+  @@map("scheduled_job_runs")
+}
+
+model TimetableImport {
+  id              String   @id @default(uuid())
+  file_name       String
+  file_size       Int
+  file_hash       String?
+  uploaded_by     String
+  uploaded_at     DateTime @default(now())
+  total_rows      Int      @default(0)
+  imported_rows   Int      @default(0)
+  updated_rows    Int      @default(0)
+  skipped_rows    Int      @default(0)
+  unresolved_rows Int      @default(0)
+  conflicting_rows Int     @default(0)
+  status          String   @default("PROCESSING") // PROCESSING, COMPLETED, COMPLETED_WITH_WARNINGS, FAILED
+  error_message   String?
+  preview_data    String?
+  summary_data    String?
+
+  user User @relation(fields: [uploaded_by], references: [id])
+
+  @@index([uploaded_by])
+  @@index([uploaded_at])
+  @@index([status])
+  @@map("timetable_imports")
+}
+
+
+
